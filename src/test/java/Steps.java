@@ -9,11 +9,17 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.concurrent.TimeUnit;
 
 public class Steps {
 
     private static ChromeDriver driver;
+    private Statement statement;
+
 
     @Дано("открыта страница по {string}")
     public void openWebPage(String string) {
@@ -26,6 +32,15 @@ public class Steps {
         driver.get(string);
         driver.manage().timeouts().pageLoadTimeout(10, TimeUnit.SECONDS);
     }
+
+    @Дано("осуществлено подключение к БД")
+    public void testConnect() throws SQLException {
+        Connection connection = DriverManager.getConnection(
+                "jdbc:h2:tcp://localhost:9092/mem:testdb",
+                "user", "pass");
+        this.statement = connection.createStatement();
+    }
+
 
     @Когда("нажимаем на кнопку {string}")
     public void clickButton(String button) {
