@@ -9,11 +9,13 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
+import java.sql.*;
 import java.util.concurrent.TimeUnit;
 
 public class Steps {
 
     private static ChromeDriver driver;
+    private Statement statement;
 
     @Дано("открыта страница по {string}")
     public void openWebPage(String string) {
@@ -27,11 +29,44 @@ public class Steps {
         driver.manage().timeouts().pageLoadTimeout(10, TimeUnit.SECONDS);
     }
 
+    @Дано("осуществлено подключение к БД")
+    public void testConnect() throws SQLException, ClassNotFoundException {
+        //Class.forName("org.h2.Driver");
+        //DriverManager.registerDriver(new org.h2.Driver());
+        Connection connection = DriverManager.getConnection(
+                "jdbc:h2:tcp://localhost:9092/mem:testdb",
+                "user", "pass");
+        this.statement = connection.createStatement();
+    }
+
+    @Когда("добавляем товар с значениями {string} {string} {string}")
+    public void testAdd(String name, String type, String tf) throws SQLException {
+        ResultSet rs = statement.executeQuery("SELECT MAX(FOOD_ID) FROM FOOD");
+        rs.next();
+        int maxId = rs.getInt(1);
+        String insertStr = "INSERT INTO FOOD (FOOD_ID, FOOD_NAME, FOOD_TYPE, FOOD_EXOTIC) VALUES(" +
+                (maxId + 1) + ", "+ name+", "+type+", "+tf+")";
+        statement.executeUpdate(insertStr);
+        rs = statement.executeQuery("SELECT TOP 1 * FROM FOOD ORDER BY FOOD_ID DESC");
+        rs.next();
+        int newMaxId = rs.getInt("FOOD_ID");
+        Assertions.assertNotEquals(maxId,newMaxId);
+        Assertions.assertEquals(maxId+1, newMaxId);
+    }
+
+    @То("удаляем товар, который вставили")
+    public void testDelet() throws SQLException {
+        statement.executeUpdate("DELETE FROM FOOD WHERE FOOD_ID=(SELECT MAX(FOOD_ID) FROM FOOD)");
+        ResultSet rs = statement.executeQuery("SELECT MAX(FOOD_ID) FROM FOOD");
+        rs.next();
+        int finalMaxId = rs.getInt(1);
+    }
+
     @Когда("нажимаем на кнопку {string}")
     public void clickButton(String button) {
         WebElement buttonAdd = driver.findElement(By.xpath(button));
         buttonAdd.click();
-        driver.manage().timeouts().implicitlyWait(20, TimeUnit.SECONDS);
+        driver.manage().timeouts().implicitlyWait(30, TimeUnit.SECONDS);
     }
 
     @Когда("вводим {string} в поле {string}")
